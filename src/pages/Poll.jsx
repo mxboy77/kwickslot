@@ -1,10 +1,13 @@
-// Apple-style UI for Poll.jsx
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../utils/firebase';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import '../datepicker-custom.css';
+
+
+
 
 export default function Poll() {
   const { id } = useParams();
@@ -110,6 +113,30 @@ export default function Poll() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const renderDatePicker = () => (
+    <DatePicker
+      inline
+      selected={null}
+      onChange={handleDateSelect}
+      highlightDates={[
+        {
+          'react-datepicker__day--highlighted-green': selectedDates.map((d) => new Date(d))
+        }
+      ]}
+      dayClassName={(date) => {
+        const dateStr = date.toISOString().split('T')[0];
+        return selectedDates.includes(dateStr)
+          ? 'react-datepicker__day--highlighted-green'
+          : undefined;
+      }}
+      renderDayContents={(day, date) => {
+        const dateStr = date.toISOString().split('T')[0];
+        const tooltip = selectedDates.includes(dateStr) ? 'You selected this day' : '';
+        return <div title={tooltip}>{day}</div>;
+      }}
+    />
+  );
+
   if (!poll) return <div className="p-4">Loading...</div>;
 
   return (
@@ -135,12 +162,7 @@ export default function Poll() {
             />
 
             <h2 className="text-lg font-medium mb-2 text-neutral-700">Select Available Dates:</h2>
-            <DatePicker
-              inline
-              selected={null}
-              onChange={handleDateSelect}
-              inlineFocus
-            />
+            {renderDatePicker()}
 
             {selectedDates.map((date) => (
               <div key={date} className="bg-neutral-100 p-4 my-3 rounded-lg shadow-sm">
@@ -200,12 +222,7 @@ export default function Poll() {
         {editingMode && (
           <>
             <h3 className="text-lg font-medium mb-2 mt-6 text-neutral-700">Change Your Availability</h3>
-            <DatePicker
-              inline
-              selected={null}
-              onChange={handleDateSelect}
-              inlineFocus
-            />
+            {renderDatePicker()}
 
             {selectedDates.map((date) => (
               <div key={date} className="bg-neutral-100 p-4 my-3 rounded-lg shadow-sm">
