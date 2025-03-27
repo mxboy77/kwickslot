@@ -12,10 +12,10 @@ export default function Poll() {
   const [selectedDates, setSelectedDates] = useState([]);
   const [selectedTimes, setSelectedTimes] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [canEdit, setCanEdit] = useState(false);
   const [editingName, setEditingName] = useState('');
   const [existingNames, setExistingNames] = useState([]);
   const [editingMode, setEditingMode] = useState(false);
+  const [copied, setCopied] = useState(false); // For clipboard management
 
   useEffect(() => {
     const fetchPoll = async () => {
@@ -77,7 +77,7 @@ export default function Poll() {
       setName('');
       setSelectedDates([]);
       setSelectedTimes({});
-      setCanEdit(false);
+      setEditingMode(false); // Disable editing mode after submit
     } catch (err) {
       console.error('Error submitting:', err);
       alert('Something went wrong.');
@@ -94,6 +94,7 @@ export default function Poll() {
     setEditingMode(true);
     const userResponse = poll.responses.find((r) => r.name === editingName);
     if (userResponse) {
+      setName(userResponse.name); // Pre-fill the name field for editing
       setSelectedDates(userResponse.availability.map((a) => a.date));
       setSelectedTimes(
         userResponse.availability.reduce((acc, { date, times }) => {
@@ -104,10 +105,28 @@ export default function Poll() {
     }
   };
 
+  // Copy poll link to clipboard
+  const handleCopy = () => {
+    navigator.clipboard.writeText(window.location.href); // Copy the current URL
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+  };
+
+  if (!poll) return <div className="p-4">Loading...</div>;
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4">
       <h1 className="text-3xl font-bold mb-4">{poll?.name}</h1>
 
+      {/* Share Poll Button */}
+      <button
+        onClick={handleCopy}
+        className="mt-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+      >
+        {copied ? 'Link Copied!' : 'Share Poll'}
+      </button>
+
+      {/* If we are editing, show the name input and allow editing */}
       {!editingMode && (
         <>
           <input
@@ -123,7 +142,6 @@ export default function Poll() {
             inline
             selected={null}
             onChange={handleDateSelect}
-            highlightDates={selectedDates.map((d) => new Date(d))}
             inlineFocus
           />
 
@@ -158,6 +176,7 @@ export default function Poll() {
         </>
       )}
 
+      {/* When not in editing mode, show the "Change Availability" button */}
       {!editingMode && (
         <div className="mt-4 text-sm">
           <span className="text-gray-700">Want to update your availability?</span>
@@ -183,6 +202,7 @@ export default function Poll() {
         </div>
       )}
 
+      {/* When editing, allow the user to update their availability */}
       {editingMode && (
         <>
           <h3 className="text-lg font-semibold mb-2">Change Your Availability:</h3>
@@ -190,7 +210,6 @@ export default function Poll() {
             inline
             selected={null}
             onChange={handleDateSelect}
-            highlightDates={selectedDates.map((d) => new Date(d))}
             inlineFocus
           />
 
