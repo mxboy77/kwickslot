@@ -4,10 +4,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../utils/firebase';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import '../datepicker-custom.css';
-
-
-
+import './datepicker-custom.css';
 
 export default function Poll() {
   const { id } = useParams();
@@ -113,6 +110,11 @@ export default function Poll() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const normalizeDate = (dateStr) => {
+    const parts = dateStr.split('-');
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  };
+
   const renderDatePicker = () => (
     <DatePicker
       inline
@@ -120,8 +122,8 @@ export default function Poll() {
       onChange={handleDateSelect}
       highlightDates={[
         {
-          'react-datepicker__day--highlighted-green': selectedDates.map((d) => new Date(d))
-        }
+          'react-datepicker__day--highlighted-green': selectedDates.map(normalizeDate),
+        },
       ]}
       dayClassName={(date) => {
         const dateStr = date.toISOString().split('T')[0];
