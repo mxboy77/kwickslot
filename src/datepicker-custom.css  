@@ -1,0 +1,5 @@
+.react-datepicker__day--highlighted-green {
+  background-color: #34d399 !important; /* Tailwind green-400 */
+  color: white;
+  border-radius: 0.3rem;
+}
