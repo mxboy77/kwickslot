@@ -1,3 +1,4 @@
+// Apple-style UI for Poll.jsx
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -15,7 +16,7 @@ export default function Poll() {
   const [editingName, setEditingName] = useState('');
   const [existingNames, setExistingNames] = useState([]);
   const [editingMode, setEditingMode] = useState(false);
-  const [copied, setCopied] = useState(false); // For clipboard management
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const fetchPoll = async () => {
@@ -61,7 +62,6 @@ export default function Poll() {
       const snap = await getDoc(ref);
       const data = snap.data();
       const existing = data.responses || [];
-
       const updatedResponses = existing.filter((r) => r.name !== name.trim());
       updatedResponses.push({
         name: name.trim(),
@@ -72,12 +72,11 @@ export default function Poll() {
       });
 
       await updateDoc(ref, { responses: updatedResponses });
-
       alert('Availability submitted!');
       setName('');
       setSelectedDates([]);
       setSelectedTimes({});
-      setEditingMode(false); // Disable editing mode after submit
+      setEditingMode(false);
     } catch (err) {
       console.error('Error submitting:', err);
       alert('Something went wrong.');
@@ -94,7 +93,7 @@ export default function Poll() {
     setEditingMode(true);
     const userResponse = poll.responses.find((r) => r.name === editingName);
     if (userResponse) {
-      setName(userResponse.name); // Pre-fill the name field for editing
+      setName(userResponse.name);
       setSelectedDates(userResponse.availability.map((a) => a.date));
       setSelectedTimes(
         userResponse.availability.reduce((acc, { date, times }) => {
@@ -105,151 +104,147 @@ export default function Poll() {
     }
   };
 
-  // Copy poll link to clipboard
   const handleCopy = () => {
-    navigator.clipboard.writeText(window.location.href); // Copy the current URL
+    navigator.clipboard.writeText(window.location.href);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+    setTimeout(() => setCopied(false), 2000);
   };
 
   if (!poll) return <div className="p-4">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4">
-      <h1 className="text-3xl font-bold mb-4">{poll?.name}</h1>
+    <div className="min-h-screen bg-neutral-50 p-6 flex flex-col items-center font-sans">
+      <div className="w-full max-w-2xl bg-white p-6 rounded-2xl shadow border border-neutral-200">
+        <h1 className="text-3xl font-semibold text-neutral-800 mb-2">{poll?.name}</h1>
 
-      {/* Share Poll Button */}
-      <button
-        onClick={handleCopy}
-        className="mt-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-      >
-        {copied ? 'Link Copied!' : 'Share Poll'}
-      </button>
+        <button
+          onClick={handleCopy}
+          className="text-sm text-blue-600 hover:text-blue-700 font-medium mb-6"
+        >
+          {copied ? 'Link Copied!' : 'Share Poll'}
+        </button>
 
-      {/* If we are editing, show the name input and allow editing */}
-      {!editingMode && (
-        <>
-          <input
-            type="text"
-            placeholder="Your Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="border p-2 rounded mb-4 w-full max-w-xs"
-          />
+        {!editingMode && (
+          <>
+            <input
+              type="text"
+              placeholder="Your Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="border border-neutral-300 p-2 rounded w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
 
-          <h2 className="text-lg font-semibold mb-2">Select Available Dates:</h2>
-          <DatePicker
-            inline
-            selected={null}
-            onChange={handleDateSelect}
-            inlineFocus
-          />
+            <h2 className="text-lg font-medium mb-2 text-neutral-700">Select Available Dates:</h2>
+            <DatePicker
+              inline
+              selected={null}
+              onChange={handleDateSelect}
+              inlineFocus
+            />
 
-          {selectedDates.map((date) => (
-            <div key={date} className="bg-white p-4 my-2 rounded shadow w-full max-w-md">
-              <h3 className="font-semibold">{date}</h3>
-              <div className="flex gap-2 flex-wrap mt-2">
-                {['Morning', 'Afternoon', 'Evening'].map((slot) => (
-                  <button
-                    key={slot}
-                    onClick={() => handleTimeToggle(date, slot)}
-                    className={`px-3 py-1 border rounded ${
-                      selectedTimes[date]?.includes(slot)
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-100'
-                    }`}
-                  >
-                    {slot}
-                  </button>
-                ))}
+            {selectedDates.map((date) => (
+              <div key={date} className="bg-neutral-100 p-4 my-3 rounded-lg shadow-sm">
+                <h3 className="font-semibold text-neutral-700">{date}</h3>
+                <div className="flex gap-2 flex-wrap mt-2">
+                  {['Morning', 'Afternoon', 'Evening'].map((slot) => (
+                    <button
+                      key={slot}
+                      onClick={() => handleTimeToggle(date, slot)}
+                      className={`px-3 py-1 border rounded transition ${
+                        selectedTimes[date]?.includes(slot)
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-neutral-800 border-neutral-300'
+                      }`}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="mt-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-          >
-            {submitting ? 'Submitting...' : 'Submit Availability'}
-          </button>
-        </>
-      )}
-
-      {/* When not in editing mode, show the "Change Availability" button */}
-      {!editingMode && (
-        <div className="mt-4 text-sm">
-          <span className="text-gray-700">Want to update your availability?</span>
-          <select
-            value={editingName}
-            onChange={(e) => setEditingName(e.target.value)}
-            className="text-blue-600 ml-2 p-2 rounded"
-          >
-            <option value="">Select your name</option>
-            {existingNames.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
             ))}
-          </select>
 
-          <button
-            onClick={handleChangeAvailability}
-            className="text-blue-600 hover:text-blue-800 ml-2"
-          >
-            Change Availability
-          </button>
-        </div>
-      )}
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="mt-6 mx-auto bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition block text-center"
+            >
+              {submitting ? 'Submitting...' : 'Submit Availability'}
+            </button>
+          </>
+        )}
 
-      {/* When editing, allow the user to update their availability */}
-      {editingMode && (
-        <>
-          <h3 className="text-lg font-semibold mb-2">Change Your Availability:</h3>
-          <DatePicker
-            inline
-            selected={null}
-            onChange={handleDateSelect}
-            inlineFocus
-          />
-
-          {selectedDates.map((date) => (
-            <div key={date} className="bg-white p-4 my-2 rounded shadow w-full max-w-md">
-              <h3 className="font-semibold">{date}</h3>
-              <div className="flex gap-2 flex-wrap mt-2">
-                {['Morning', 'Afternoon', 'Evening'].map((slot) => (
-                  <button
-                    key={slot}
-                    onClick={() => handleTimeToggle(date, slot)}
-                    className={`px-3 py-1 border rounded ${
-                      selectedTimes[date]?.includes(slot)
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-100'
-                    }`}
-                  >
-                    {slot}
-                  </button>
+        {!editingMode && (
+          <div className="mt-6 text-sm text-neutral-600">
+            <span>Want to update your availability?</span>
+            <div className="flex items-center gap-2 mt-2">
+              <select
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                className="p-2 border border-neutral-300 rounded"
+              >
+                <option value="">Select your name</option>
+                {existingNames.map((name) => (
+                  <option key={name} value={name}>{name}</option>
                 ))}
-              </div>
+              </select>
+              <button
+                onClick={handleChangeAvailability}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                Change
+              </button>
             </div>
-          ))}
+          </div>
+        )}
 
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="mt-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-          >
-            {submitting ? 'Submitting...' : 'Submit Updated Availability'}
-          </button>
-        </>
-      )}
+        {editingMode && (
+          <>
+            <h3 className="text-lg font-medium mb-2 mt-6 text-neutral-700">Change Your Availability</h3>
+            <DatePicker
+              inline
+              selected={null}
+              onChange={handleDateSelect}
+              inlineFocus
+            />
 
-      <a
-        href={`/poll/${id}/results`}
-        className="mt-4 underline text-blue-600 hover:text-blue-800 text-sm"
-      >
-        View Group Availability
-      </a>
+            {selectedDates.map((date) => (
+              <div key={date} className="bg-neutral-100 p-4 my-3 rounded-lg shadow-sm">
+                <h3 className="font-semibold text-neutral-700">{date}</h3>
+                <div className="flex gap-2 flex-wrap mt-2">
+                  {['Morning', 'Afternoon', 'Evening'].map((slot) => (
+                    <button
+                      key={slot}
+                      onClick={() => handleTimeToggle(date, slot)}
+                      className={`px-3 py-1 border rounded transition ${
+                        selectedTimes[date]?.includes(slot)
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-neutral-800 border-neutral-300'
+                      }`}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="mt-4 bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition"
+            >
+              {submitting ? 'Submitting...' : 'Submit Updated Availability'}
+            </button>
+          </>
+        )}
+
+        <a
+          href={`/poll/${id}/results`}
+          className="mt-6 inline-block text-sm underline text-blue-600 hover:text-blue-800"
+        >
+          View Group Availability
+        </a>
+      </div>
     </div>
   );
 }
