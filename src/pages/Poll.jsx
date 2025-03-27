@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../utils/firebase';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -17,15 +17,30 @@ export default function Poll() {
   const [existingNames, setExistingNames] = useState([]);
   const [editingMode, setEditingMode] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [availabilitySummary, setAvailabilitySummary] = useState({});
 
   useEffect(() => {
     const fetchPoll = async () => {
       const ref = doc(db, 'polls', id);
       const snap = await getDoc(ref);
       if (snap.exists()) {
-        setPoll(snap.data());
-        const existingResponses = snap.data().responses || [];
+        const data = snap.data();
+        const now = new Date();
+        if (data.expiresAt && data.expiresAt.toDate() < now) {
+          setPoll({ error: 'This poll has expired.' });
+          return;
+        }
+        setPoll(data);
+        const existingResponses = data.responses || [];
         setExistingNames(existingResponses.map((r) => r.name));
+
+        const summary = {};
+        existingResponses.forEach(({ availability }) => {
+          (availability || []).forEach(({ date }) => {
+            summary[date] = (summary[date] || 0) + 1;
+          });
+        });
+        setAvailabilitySummary(summary);
       } else {
         setPoll({ error: 'Poll not found' });
       }
@@ -61,7 +76,19 @@ export default function Poll() {
       const ref = doc(db, 'polls', id);
       const snap = await getDoc(ref);
       const data = snap.data();
+
+      const now = new Date();
+      if (data.expiresAt && data.expiresAt.toDate() < now) {
+        alert('This poll has expired.');
+        return;
+      }
+
       const existing = data.responses || [];
+      if (existing.length >= 50 && !existing.some(r => r.name === name.trim())) {
+        alert("This poll has reached the maximum number of responses.");
+        return;
+      }
+
       const updatedResponses = existing.filter((r) => r.name !== name.trim());
       updatedResponses.push({
         name: name.trim(),
@@ -116,42 +143,83 @@ export default function Poll() {
   };
 
   const renderDatePicker = () => (
-    <DatePicker
-      inline
-      selected={null}
-      onChange={handleDateSelect}
-      highlightDates={[
-        {
-          'react-datepicker__day--highlighted-green': selectedDates.map(normalizeDate),
-        },
-      ]}
-      dayClassName={(date) => {
-        const dateStr = date.toISOString().split('T')[0];
-        return selectedDates.includes(dateStr)
-          ? 'react-datepicker__day--highlighted-green'
-          : undefined;
-      }}
-      renderDayContents={(day, date) => {
-        const dateStr = date.toISOString().split('T')[0];
-        const tooltip = selectedDates.includes(dateStr) ? 'You selected this day' : '';
-        return <div title={tooltip}>{day}</div>;
-      }}
-    />
+    <>
+      <div className="flex gap-2 mb-2 text-sm text-gray-500">
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded bg-green-200"></span> 1-2 people
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded bg-green-400"></span> 3-4 people
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded bg-green-600"></span> 5+ people
+        </span>
+      </div>
+      <DatePicker
+        inline
+        selected={null}
+        onChange={handleDateSelect}
+        highlightDates={[
+          {
+            'react-datepicker__day--highlighted-green': selectedDates.map(normalizeDate),
+          },
+        ]}
+        dayClassName={(date) => {
+          const dateStr = date.toISOString().split('T')[0];
+          const count = availabilitySummary[dateStr] || 0;
+          if (selectedDates.includes(dateStr)) {
+            return 'react-datepicker__day--highlighted-green';
+          }
+          if (count >= 5) return 'hinted--dark';
+          if (count >= 3) return 'hinted--medium';
+          if (count >= 1) return 'hinted--light';
+          return undefined;
+        }}
+        renderDayContents={(day, date) => {
+          const dateStr = date.toISOString().split('T')[0];
+          const count = availabilitySummary[dateStr];
+          return (
+            <div title={selectedDates.includes(dateStr) ? 'You selected this day' : count ? `${count} people available` : ''}>
+              {day}
+              {count && <span className="text-xs ml-1 text-green-600 font-medium">({count})</span>}
+            </div>
+          );
+        }}
+      />
+    </>
   );
+
+  if (poll?.error) {
+    return <div className="p-4 text-red-500 font-medium">{poll.error}</div>;
+  }
 
   if (!poll) return <div className="p-4">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-neutral-50 p-6 flex flex-col items-center font-sans">
       <div className="w-full max-w-2xl bg-white p-6 rounded-2xl shadow border border-neutral-200">
-        <h1 className="text-3xl font-semibold text-neutral-800 mb-2">{poll?.name}</h1>
+        <h1 className="text-3xl font-semibold text-neutral-800 mb-1">{poll?.name}</h1>
+        {poll?.expiresAt && (
+          <p className="text-sm text-neutral-500 mb-4">
+            Poll closes in {Math.ceil((poll.expiresAt.toDate() - Date.now()) / (1000 * 60 * 60 * 24))} day(s)
+          </p>
+        )}
 
-        <button
-          onClick={handleCopy}
-          className="text-sm text-blue-600 hover:text-blue-700 font-medium mb-6"
-        >
-          {copied ? 'Link Copied!' : 'Share Poll'}
-        </button>
+        <div className="flex gap-6 mb-6">
+          <button
+            onClick={handleCopy}
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+          >
+            {copied ? 'Link Copied!' : 'Share Poll'}
+          </button>
+
+          <a
+            href={`/poll/${id}/results`}
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+          >
+            View Group Availability
+          </a>
+        </div>
 
         {!editingMode && (
           <>
@@ -256,13 +324,6 @@ export default function Poll() {
             </button>
           </>
         )}
-
-        <a
-          href={`/poll/${id}/results`}
-          className="mt-6 inline-block text-sm underline text-blue-600 hover:text-blue-800"
-        >
-          View Group Availability
-        </a>
       </div>
     </div>
   );
