@@ -205,14 +205,16 @@ export default function Poll() {
           </p>
         )}
 
-        <div className="flex gap-6 mb-6">
+        <div className="flex gap-4 mb-6">
+          <a href="/" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            New Poll
+          </a>
           <button
             onClick={handleCopy}
             className="text-sm text-blue-600 hover:text-blue-700 font-medium"
           >
             {copied ? 'Link Copied!' : 'Share Poll'}
           </button>
-
           <a
             href={`/poll/${id}/results`}
             className="text-sm text-blue-600 hover:text-blue-700 font-medium"
